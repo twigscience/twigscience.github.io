@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twig Science - Cosmic Portal</title>
+    <style>
+        :root {
+            --bg: #050508;
+            --surface: #0e0e14;
+            --surface-hover: #161622;
+            --primary: #38bdf8;
+            --secondary: #818cf8;
+            --accent: #c084fc;
+            --primary-glow: rgba(56, 189, 248, 0.15);
+            --text: #f8fafc;
+            --text-light: #94a3b8;
+            --border: #1e1e2d;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Background starfield / ambient glow */
+        body::before {
+            content: '';
+            position: absolute;
+            top: -10%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(129, 140, 248, 0.07) 0%, rgba(56, 189, 248, 0.03) 40%, rgba(0,0,0,0) 70%);
+            z-index: -1;
+            animation: pulseGlow 10s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulseGlow {
+            0% { transform: translateX(-50%) scale(0.9); opacity: 0.5; }
+            100% { transform: translateX(-50%) scale(1.15); opacity: 1; }
+        }
+
+        /* Floating background particles (animations around the page) */
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--primary);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--primary);
+            opacity: 0.4;
+            z-index: -1;
+            animation: floatParticle 12s linear infinite;
+        }
+
+        .particle:nth-child(1) { top: 15%; left: 10%; animation-duration: 14s; animation-delay: 0s; }
+        .particle:nth-child(2) { top: 70%; left: 85%; animation-duration: 10s; animation-delay: 2s; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+        .particle:nth-child(3) { top: 40%; left: 90%; animation-duration: 16s; animation-delay: 1s; }
+        .particle:nth-child(4) { top: 80%; left: 15%; animation-duration: 11s; animation-delay: 4s; background: var(--secondary); box-shadow: 0 0 8px var(--secondary); }
+        .particle:nth-child(5) { top: 25%; left: 80%; animation-duration: 13s; animation-delay: 3s; }
+
+        @keyframes floatParticle {
+            0% { transform: translateY(0px) translateX(0px); opacity: 0.2; }
+            50% { transform: translateY(-40px) translateX(20px); opacity: 0.8; }
+            100% { transform: translateY(0px) translateX(0px); opacity: 0.2; }
+        }
+
+        header {
+            background-color: rgba(14, 14, 20, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .logo-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            text-decoration: none;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        .logo span.icon {
+            color: var(--primary);
+            text-shadow: 0 0 12px var(--primary-glow);
+        }
+
+        .badge {
+            display: inline-block;
+            background-color: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            color: var(--primary);
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            width: fit-content;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 2.5rem auto;
+            padding: 0 1.5rem;
+            width: 100%;
+            flex: 1;
+        }
+
+        /* Hero Section with Orbiting Planet Animation */
+        .hero {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+            margin-bottom: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Orbit System Graphic */
+        .orbit-system {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 1.5rem auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sun {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            border-radius: 50%;
+            box-shadow: 0 0 20px var(--primary);
+            position: relative;
+            z-index: 2;
+        }
+
+        .orbit {
+            position: absolute;
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+
+        .orbit-1 {
+            width: 65px;
+            height: 65px;
+            animation: spin 6s linear infinite;
+        }
+
+        .orbit-2 {
+            width: 110px;
+            height: 110px;
+            animation: spin 12s linear infinite reverse;
+        }
+
+        .planet {
+            position: absolute;
+            border-radius: 50%;
+        }
+
+        .planet-1 {
+            width: 10px;
+            height: 10px;
+            background: var(--accent);
+            top: 2px;
+            left: 20px;
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        .planet-2 {
+            width: 12px;
+            height: 12px;
+            background: var(--primary);
+            bottom: 10px;
+            right: 15px;
+            box-shadow: 0 0 8px var(--primary);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .hero h1 {
+            font-size: 2.25rem;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #ffffff 30%, var(--text-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            color: var(--text-light);
+            font-size: 1.05rem;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.75rem;
+            text-decoration: none;
+            color: inherit;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+
+        .card:hover {
+            transform: translateY(-4px);
+            background: var(--surface-hover);
+            border-color: var(--primary);
+            box-shadow: 0 12px 30px var(--primary-glow);
+        }
+
+        .card h3 {
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card h3::after {
+            content: '→';
+            color: var(--primary);
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.30s ease;
+        }
+
+        .card:hover h3::after {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .card p {
+            color: var(--text-light);
+            font-size: 0.925rem;
+            line-height: 1.5;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+            font-size: 0.8rem;
+            border-top: 1px solid var(--border);
+            background: var(--bg);
+            margin-top: auto;
+            letter-spacing: 0.02em;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Floating background animation particles -->
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+
+    <header>
+        <div class="logo-container">
+            <span class="logo"><span class="icon">🪐</span> Twig Science</span>
+            <span class="badge">by Kendrick</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="hero">
+            <!-- Animated Science / Planetary Orbit Graphic -->
+            <div class="orbit-system">
+                <div class="sun"></div>
+                <div class="orbit orbit-1">
+                    <div class="planet planet-1"></div>
+                </div>
+                <div class="orbit orbit-2">
+                    <div class="planet planet-2"></div>
+                </div>
+            </div>
+            <h1>Welcome to Twig Science</h1>
+            <p>Access your modules, interactive planetary simulations, and science learning tools with optimized performance.</p>
+        </div>
+
+        <div class="grid">
+            <a href="https://twigscience.github.io/gnmath.html" class="card">
+                <h3>gn-math</h3>
+                <p>7th grade math study for multiplying, subtracting, and adding integers.</p>
+            </a>
+            <a href="https://twigscience.github.io/gnmath.html" class="card">
+                <h3>Interactive Labs</h3>
+                <p>Run orbital simulations, analyze cosmic data sets, and test digital science investigations.</p>
+            </a>
+            <a href="https://twigscience.github.io/gnmath.html" class="card">
+                <h3>Student Resources</h3>
+                <p>Access universal glossaries, homework helps, and review materials for your classes.</p>
+            </a>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2026 Twig Science Portal. All rights reserved.
+    </footer>
+
+</body>
+</html>
