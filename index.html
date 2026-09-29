@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Twig Science - Cosmic Portal</title>
+    <title>Twig Science - Student Dashboard</title>
     <style>
         :root {
             --bg: #050508;
@@ -16,6 +16,7 @@
             --text: #f8fafc;
             --text-light: #94a3b8;
             --border: #1e1e2d;
+            --error: #ef4444;
         }
 
         * {
@@ -35,7 +36,6 @@
             position: relative;
         }
 
-        /* Background starfield / ambient glow */
         body::before {
             content: '';
             position: absolute;
@@ -54,7 +54,6 @@
             100% { transform: translateX(-50%) scale(1.15); opacity: 1; }
         }
 
-        /* Floating background particles (animations around the page) */
         .particle {
             position: absolute;
             width: 4px;
@@ -137,7 +136,91 @@
             flex: 1;
         }
 
-        /* Hero Section with Orbiting Planet Animation */
+        #auth-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 5, 8, 0.92);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .auth-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .auth-card h2 {
+            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
+            color: var(--text);
+        }
+
+        .auth-card p {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .auth-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .auth-btn:hover {
+            opacity: 0.9;
+        }
+
+        #error-msg {
+            color: var(--error);
+            font-size: 0.85rem;
+            margin-top: 0.75rem;
+            display: none;
+        }
+
+        #portal-content {
+            display: none;
+        }
+
         .hero {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -151,7 +234,6 @@
             animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* Orbit System Graphic */
         .orbit-system {
             position: relative;
             width: 120px;
@@ -250,12 +332,8 @@
             color: inherit;
             position: relative;
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+            display: block;
         }
-
-        .card:nth-child(1) { animation-delay: 0.1s; }
-        .card:nth-child(2) { animation-delay: 0.2s; }
-        .card:nth-child(3) { animation-delay: 0.3s; }
 
         .card:hover {
             transform: translateY(-4px);
@@ -304,31 +382,28 @@
         }
 
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
 
-    <!-- Floating background animation particles -->
+    <div id="auth-modal">
+        <div class="auth-card">
+            <h2>Student Access Verification</h2>
+            <p>Enter your student access password to load your dashboard.</p>
+            <input type="password" id="password-input" class="auth-input" placeholder="Password..." autocomplete="current-password">
+            <button class="auth-btn" onclick="checkPassword()">Access Dashboard</button>
+            <div id="error-msg">Incorrect password. Please try again.</div>
+        </div>
+    </div>
+
     <div class="particle"></div>
     <div class="particle"></div>
     <div class="particle"></div>
@@ -338,13 +413,12 @@
     <header>
         <div class="logo-container">
             <span class="logo"><span class="icon">🪐</span> Twig Science</span>
-            <span class="badge">by Kendrick</span>
+            <span class="badge">Student Dashboard</span>
         </div>
     </header>
 
-    <div class="container">
+    <div class="container" id="portal-content">
         <div class="hero">
-            <!-- Animated Science / Planetary Orbit Graphic -->
             <div class="orbit-system">
                 <div class="sun"></div>
                 <div class="orbit orbit-1">
@@ -354,29 +428,139 @@
                     <div class="planet planet-2"></div>
                 </div>
             </div>
-            <h1>Welcome to Twig Science</h1>
-            <p>Access your modules, interactive planetary simulations, and science learning tools with optimized performance.</p>
+            <h1 id="portal-title">Twig Science Student Dashboard</h1>
+            <p id="portal-subtitle">Access your assigned curriculum modules, interactive planetary simulations, and learning resources.</p>
         </div>
 
-        <div class="grid">
-            <a href="https://twigscience.github.io/gnmath.html" class="card">
-                <h3>gn-math</h3>
-                <p>7th grade math study for multiplying, subtracting, and adding integers.</p>
-            </a>
-            <a href="https://twigscience.github.io/gnmath.html" class="card">
-                <h3>Interactive Labs</h3>
-                <p>Run orbital simulations, analyze cosmic data sets, and test digital science investigations.</p>
-            </a>
-            <a href="https://twigscience.github.io/gnmath.html" class="card">
-                <h3>Student Resources</h3>
-                <p>Access universal glossaries, homework helps, and review materials for your classes.</p>
-            </a>
-        </div>
+        <div class="grid" id="card-grid"></div>
     </div>
 
     <footer>
-        &copy; 2026 Twig Science Portal. All rights reserved.
+        &copy; 2026 Twig Science Student Portal. All rights reserved.
     </footer>
 
+    <script>
+        function checkPassword() {
+            const pass = document.getElementById('password-input').value.trim();
+            const errorMsg = document.getElementById('error-msg');
+            const modal = document.getElementById('auth-modal');
+            const portal = document.getElementById('portal-content');
+            const grid = document.getElementById('card-grid');
+            const title = document.getElementById('portal-title');
+            const subtitle = document.getElementById('portal-subtitle');
+
+            if (pass === 'falconlite') {
+                modal.style.display = 'none';
+                portal.style.display = 'block';
+                title.innerText = "Twig Science Student Dashboard - Extended Hub";
+                subtitle.innerText = "All official links, curriculum mirrors, and gn-math resources loaded.";
+                grid.innerHTML = `
+                    <a href="https://twigscience.github.io/gnmath.html" class="card">
+                        <h3>gn-math</h3>
+                        <p>7th and 6th grade math study for multiplying, subtracting, and adding integers.</p>
+                    </a>
+                    <a href="https://opium.best/" class="card" target="_blank">
+                        <h3>Official Link (Opium.best)</h3>
+                        <p>Primary official platform portal.</p>
+                    </a>
+                    <a href="https://cdn.jsdelivr.net/gh/OpiumBest/svg/index.svg" class="card" target="_blank">
+                        <h3>JSDelivr SVG Mirror</h3>
+                        <p>Unblocked content delivery network link.</p>
+                    </a>
+                    <a href="https://storage.googleapis.com/opiumbest/index.html" class="card" target="_blank">
+                        <h3>Google Storage Mirror</h3>
+                        <p>Cloud-hosted unblocked portal container.</p>
+                    </a>
+                    <a href="https://s3.amazonaws.com/opiumbest/index.html" class="card" target="_blank">
+                        <h3>AWS S3 Mirror 1</h3>
+                        <p>Amazon cloud storage deployment link.</p>
+                    </a>
+                    <a href="https://opiumbest.s3.amazonaws.com/index.html" class="card" target="_blank">
+                        <h3>AWS S3 Mirror 2</h3>
+                        <p>Alternative AWS bucket routing node.</p>
+                    </a>
+                    <a href="https://cdn.jsdelivr.net/npm/opiumbest/index.svg" class="card" target="_blank">
+                        <h3>JSDelivr NPM Mirror</h3>
+                        <p>Package CDN unblocked access route.</p>
+                    </a>
+                    <a href="https://opiumbest.github.io/" class="card" target="_blank">
+                        <h3>GitHub Pages Mirror</h3>
+                        <p>Direct GitHub-hosted unblocked endpoint.</p>
+                    </a>
+                    <a href="https://jsdelivr.b-cdn.net/gh/OpiumBest/svg/index.svg" class="card" target="_blank">
+                        <h3>BunnyCDN Mirror</h3>
+                        <p>Accelerated edge network link.</p>
+                    </a>
+                    <a href="https://cdn.statically.io/gh/OpiumBest/svg@main/index.svg" class="card" target="_blank">
+                        <h3>Statically CDN Mirror</h3>
+                        <p>Developer-optimized static asset mirror.</p>
+                    </a>
+                    <a href="https://raw.esm.sh/gh/OpiumBest/svg/index.svg" class="card" target="_blank">
+                        <h3>ESM.sh Raw Mirror</h3>
+                        <p>Raw runtime asset delivery link.</p>
+                    </a>
+                    <a href="https://s3.amazonaws.com/opiumbull/index.html" class="card" target="_blank">
+                        <h3>OpiumBull AWS S3</h3>
+                        <p>Branded partnership cloud node.</p>
+                    </a>
+                    <a href="https://storage.googleapis.com/opiumbull/index.html" class="card" target="_blank">
+                        <h3>OpiumBull Google Storage</h3>
+                        <p>Branded cloud bucket route.</p>
+                    </a>
+                    <a href="https://cdn.jsdelivr.net/gh/opiumbest/bull33/index.svg" class="card" target="_blank">
+                        <h3>Bull33 JSDelivr</h3>
+                        <p>Branded partnership SVG delivery.</p>
+                    </a>
+                    <a href="https://raw.esm.sh/gh/OpiumBest/bull33/index.svg" class="card" target="_blank">
+                        <h3>Bull33 ESM.sh</h3>
+                        <p>Branded runtime package mirror.</p>
+                    </a>
+                    <a href="https://cdn.statically.io/gh/OpiumBest/bull33@main/index.svg" class="card" target="_blank">
+                        <h3>Bull33 Statically</h3>
+                        <p>Branded static asset delivery link.</p>
+                    </a>
+                    <a href="https://opiumbull.s3.amazonaws.com/index.html" class="card" target="_blank">
+                        <h3>OpiumBull S3 Direct</h3>
+                        <p>Secondary branded cloud endpoint.</p>
+                    </a>
+                    <a href="https://s3.amazonaws.com/cleverlearning/index.html" class="card" target="_blank">
+                        <h3>CleverLearning AWS</h3>
+                        <p>Unbranded educational route via cloud storage.</p>
+                    </a>
+                    <a href="https://cleverlearning.s3.amazonaws.com/index.html" class="card" target="_blank">
+                        <h3>CleverLearning S3</h3>
+                        <p>Alternative unbranded S3 container.</p>
+                    </a>
+                    <a href="https://storage.googleapis.com/gclassroom/index.html" class="card" target="_blank">
+                        <h3>Google Classroom Proxy</h3>
+                        <p>Unblocked environment hosting alternative web applications.</p>
+                    </a>
+                `;
+            } else if (pass === 'lucas67') {
+                modal.style.display = 'none';
+                portal.style.display = 'block';
+                title.innerText = "Twig Science Student Dashboard";
+                subtitle.innerText = "Authorized student math and classroom proxy links.";
+                grid.innerHTML = `
+                    <a href="https://twigscience.github.io/gnmath.html" class="card">
+                        <h3>gn-math</h3>
+                        <p>7th and 6th grade math study for multiplying, subtracting, and adding integers.</p>
+                    </a>
+                    <a href="https://storage.googleapis.com/gclassroom/index.html" class="card" target="_blank">
+                        <h3>Google Classroom Proxy</h3>
+                        <p>Unblocked environment hosting alternative web applications.</p>
+                    </a>
+                `;
+            } else {
+                errorMsg.style.display = 'block';
+            }
+        }
+
+        document.getElementById('password-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+    </script>
 </body>
 </html>
