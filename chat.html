@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PulseChat - Live WebRTC Hub</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PeerJS for easy WebRTC Data Channels -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+        body { font-family: 'Outfit', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen flex flex-col overflow-hidden">
+
+    <!-- Header / Navbar -->
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex justify-between items-center shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="bg-indigo-600 text-white font-extrabold px-3 py-1.5 rounded-xl text-xl tracking-wider shadow-indigo-500/50 shadow-md">PULSE</div>
+            <span class="text-xs bg-indigo-500/10 text-indigo-400 font-semibold px-2.5 py-1 rounded-full border border-indigo-500/20">WebRTC P2P</span>
+        </div>
+        <div id="connection-status" class="flex items-center space-x-2 text-sm">
+            <span class="w-3 h-3 rounded-full bg-amber-500 animate-pulse" id="status-dot"></span>
+            <span id="status-text" class="text-slate-400 font-medium">Disconnected</span>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 flex overflow-hidden relative">
+
+        <!-- Lobby View -->
+        <div id="lobby-view" class="m-auto max-w-md w-full p-8 bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl space-y-6">
+            <div class="text-center space-y-2">
+                <h1 class="text-3xl font-extrabold tracking-tight">Jump into the Room</h1>
+                <p class="text-slate-400 text-sm">Join the public hub or enter a secure private code.</p>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Your Nickname</label>
+                    <input type="text" id="username-input" placeholder="e.g. CyberNinja" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-indigo-500 transition font-medium">
+                </div>
+
+                <button onclick="joinPublicServer()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2">
+                    <span>🌐 Join Public Server</span>
+                </button>
+
+                <div class="relative flex py-2 items-center">
+                    <div class="flex-grow border-t border-slate-800"></div>
+                    <span class="flex-shrink mx-4 text-slate-500 text-xs font-bold uppercase">or private room</span>
+                    <div class="flex-grow border-t border-slate-800"></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" id="room-code-input" placeholder="Room Code" class="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-indigo-500 transition font-medium uppercase">
+                    <input type="number" id="room-capacity" placeholder="Max (e.g. 10)" value="10" min="2" max="50" class="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-indigo-500 transition font-medium">
+                </div>
+
+                <button onclick="createOrJoinPrivateRoom()" class="w-full bg-slate-800 hover:bg-slate-700 text-indigo-400 border border-indigo-500/30 font-bold py-3 rounded-xl transition">
+                    🔒 Create / Join Private Room
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat Room View (Hidden by default) -->
+        <div id="chat-view" class="hidden flex-1 flex h-full">
+            <!-- Sidebar: Participants -->
+            <aside class="w-72 bg-slate-900 border-r border-slate-800 flex flex-col">
+                <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+                    <div>
+                        <h2 id="current-room-title" class="font-bold text-lg text-indigo-400">Public Server</h2>
+                        <span id="room-meta" class="text-xs text-slate-400">P2P Mesh Hub</span>
+                    </div>
+                    <button onclick="leaveRoom()" class="text-xs bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 px-2.5 py-1.5 rounded-lg font-semibold transition">Leave</button>
+                </div>
+                <div class="p-4 flex-1 overflow-y-auto space-y-2">
+                    <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Connected Peers</h3>
+                    <div id="peer-list" class="space-y-1.5">
+                        <!-- Dynamically populated peer list -->
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Chat Main Area -->
+            <div class="flex-1 flex flex-col bg-slate-950">
+                <!-- Message Stream -->
+                <div id="message-container" class="flex-1 p-6 overflow-y-auto space-y-4">
+                    <!-- Chat messages injected here -->
+                </div>
+
+                <!-- Input Controls -->
+                <div class="p-4 bg-slate-900 border-t border-slate-800">
+                    <form id="chat-form" onsubmit="sendTextMessage(event)" class="flex items-center space-x-3">
+                        <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 p-3 rounded-xl border border-slate-700 transition text-slate-300 hover:text-white" title="Send Image">
+                            📷
+                            <input type="file" id="image-input" accept="image/*" class="hidden" onchange="previewImage(event)">
+                        </label>
+                        <input type="text" id="message-input" placeholder="Type your message here..." autocomplete="off" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-indigo-500 transition font-medium">
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-indigo-600/30">
+                            Send
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Preview Modal -->
+        <div id="image-modal" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-lg text-slate-200">Send Image Attachment</h3>
+                    <button onclick="closeImageModal()" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+                </div>
+                <div class="rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 max-h-64 flex items-center justify-center">
+                    <img id="modal-img-preview" class="max-h-64 object-contain">
+                </div>
+                <input type="text" id="image-caption-input" placeholder="Add a caption (optional)..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-indigo-500 transition font-medium text-sm">
+                <div class="flex space-x-3">
+                    <button onclick="closeImageModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-xl transition">Cancel</button>
+                    <button onclick="sendImageMessage()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-indigo-600/20">Send Image</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Script Application Logic -->
+    <script>
+        let peer = null;
+        let connections = {};
+        let myUsername = '';
+        let currentRoom = '';
+        let stagedImageBase64 = null;
+
+        function updateStatus(text, colorClass) {
+            document.getElementById('status-text').innerText = text;
+            const dot = document.getElementById('status-dot');
+            dot.className = `w-3 h-3 rounded-full ${colorClass}`;
+        }
+
+        function joinPublicServer() {
+            const name = document.getElementById('username-input').value.trim();
+            if (!name) { alert('Please enter a nickname.'); return; }
+            myUsername = name;
+            currentRoom = 'public-server-room-v1';
+            initPeerAndConnect();
+        }
+
+        function createOrJoinPrivateRoom() {
+            const name = document.getElementById('username-input').value.trim();
+            const code = document.getElementById('room-code-input').value.trim().toUpperCase();
+            if (!name) { alert('Please enter a nickname.'); return; }
+            if (!code) { alert('Please enter a room code.'); return; }
+            
+            myUsername = name;
+            currentRoom = `private-${code}`;
+            initPeerAndConnect();
+        }
+
+        function initPeerAndConnect() {
+            peer = new Peer();
+
+            peer.on('open', (id) => {
+                updateStatus('Connected', 'bg-emerald-500');
+                transitionToChatUI();
+                addSystemMessage(`You joined as <b>${myUsername}</b>.`);
+                updatePeerListUI();
+            });
+
+            peer.on('connection', (conn) => {
+                setupConnectionHandlers(conn);
+            });
+
+            peer.on('error', (err) => {
+                console.error(err);
+                updateStatus('Connection Error', 'bg-rose-500');
+            });
+        }
+
+        function transitionToChatUI() {
+            document.getElementById('lobby-view').classList.add('hidden');
+            document.getElementById('chat-view').classList.remove('hidden');
+            document.getElementById('current-room-title').innerText = currentRoom.startsWith('private-') ? `Room: ${currentRoom.replace('private-', '')}` : 'Public Server';
+        }
+
+        function setupConnectionHandlers(conn) {
+            connections[conn.peer] = conn;
+
+            conn.on('data', (data) => {
+                handleIncomingData(data);
+            });
+
+            conn.on('close', () => {
+                delete connections[conn.peer];
+                updatePeerListUI();
+            });
+        }
+
+        function handleIncomingData(data) {
+            const container = document.getElementById('message-container');
+            const bubble = document.createElement('div');
+            bubble.className = "flex flex-col space-y-1";
+
+            if (data.type === 'chat') {
+                bubble.innerHTML = `
+                    <div class="flex items-baseline space-x-2">
+                        <span class="font-bold text-indigo-400 text-sm">${escapeHtml(data.username)}</span>
+                        <span class="text-xs text-slate-500">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-3.5 rounded-2xl max-w-lg text-slate-200 text-sm">${escapeHtml(data.message)}</div>
+                `;
+            } else if (data.type === 'image') {
+                bubble.innerHTML = `
+                    <div class="flex items-baseline space-x-2">
+                        <span class="font-bold text-indigo-400 text-sm">${escapeHtml(data.username)}</span>
+                        <span class="text-xs text-slate-500">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-2xl max-w-xs space-y-2">
+                        <img src="${data.image}" class="rounded-xl w-full object-cover">
+                        ${data.caption ? `<p class="text-slate-200 text-sm px-1">${escapeHtml(data.caption)}</p>` : ''}
+                    </div>
+                `;
+            }
+            container.appendChild(bubble);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendTextMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const container = document.getElementById('message-container');
+            const bubble = document.createElement('div');
+            bubble.className = "flex flex-col space-y-1 items-end";
+            bubble.innerHTML = `
+                <div class="flex items-baseline space-x-2">
+                    <span class="text-xs text-slate-500">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    <span class="font-bold text-indigo-400 text-sm">You</span>
+                </div>
+                <div class="bg-indigo-600 text-white p-3.5 rounded-2xl max-w-lg text-sm shadow-lg shadow-indigo-600/20">${escapeHtml(text)}</div>
+            `;
+            container.appendChild(bubble);
+            container.scrollTop = container.scrollHeight;
+
+            const payload = { type: 'chat', username: myUsername, message: text };
+            Object.values(connections).forEach(conn => conn.send(payload));
+
+            input.value = '';
+        }
+
+        function previewImage(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                stagedImageBase64 = event.target.result;
+                document.getElementById('modal-img-preview').src = stagedImageBase64;
+                document.getElementById('image-caption-input').value = '';
+                document.getElementById('image-modal').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+            e.target.value = ''; // reset file input
+        }
+
+        function closeImageModal() {
+            document.getElementById('image-modal').classList.add('hidden');
+            stagedImageBase64 = null;
+        }
+
+        function sendImageMessage() {
+            if (!stagedImageBase64) return;
+            const caption = document.getElementById('image-caption-input').value.trim();
+
+            const container = document.getElementById('message-container');
+            const bubble = document.createElement('div');
+            bubble.className = "flex flex-col space-y-1 items-end";
+            bubble.innerHTML = `
+                <div class="flex items-baseline space-x-2">
+                    <span class="text-xs text-slate-500">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    <span class="font-bold text-indigo-400 text-sm">You</span>
+                </div>
+                <div class="bg-slate-900 border border-indigo-500/30 p-2.5 rounded-2xl max-w-xs space-y-2">
+                    <img src="${stagedImageBase64}" class="rounded-xl w-full object-cover">
+                    ${caption ? `<p class="text-slate-200 text-sm px-1">${escapeHtml(caption)}</p>` : ''}
+                </div>
+            `;
+            container.appendChild(bubble);
+            container.scrollTop = container.scrollHeight;
+
+            const payload = { type: 'image', username: myUsername, image: stagedImageBase64, caption: caption };
+            Object.values(connections).forEach(conn => conn.send(payload));
+
+            closeImageModal();
+        }
+
+        function addSystemMessage(htmlText) {
+            const container = document.getElementById('message-container');
+            const note = document.createElement('div');
+            note.className = "text-center my-2";
+            note.innerHTML = `<span class="text-xs bg-slate-900 text-slate-400 px-3 py-1 rounded-full border border-slate-800">${htmlText}</span>`;
+            container.appendChild(note);
+        }
+
+        function updatePeerListUI() {
+            const list = document.getElementById('peer-list');
+            list.innerHTML = `
+                <div class="flex items-center space-x-2.5 px-3 py-2 bg-slate-950 rounded-xl border border-slate-800/80">
+                    <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                    <span class="text-sm font-semibold text-slate-200">${myUsername} (You)</span>
+                </div>
+            `;
+            Object.keys(connections).forEach(peerId => {
+                list.innerHTML += `
+                    <div class="flex items-center space-x-2.5 px-3 py-2 bg-slate-950 rounded-xl border border-slate-800/80">
+                        <div class="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>
+                        <span class="text-sm font-semibold text-slate-200">Peer (${peerId.slice(0, 5)})</span>
+                    </div>
+                `;
+            });
+        }
+
+        function leaveRoom() {
+            if (peer) peer.destroy();
+            connections = {};
+            document.getElementById('chat-view').classList.add('hidden');
+            document.getElementById('lobby-view').classList.remove('hidden');
+            document.getElementById('message-container').innerHTML = '';
+            updateStatus('Disconnected', 'bg-amber-500');
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+    </script>
+</body>
+</html>
