@@ -3,298 +3,359 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PulseChat - Live WebRTC Hub</title>
-    <!-- Tailwind CSS for styling -->
+    <title>Google Classroom</title>
+    <link rel="icon" type="image/svg+xml" href="https://www.gstatic.com/classroom/logo_square_rounded.svg">
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PeerJS for easy WebRTC Data Channels -->
+    <!-- PeerJS -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Clean Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
-        body { font-family: 'Outfit', sans-serif; }
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background-color: #0b0f19;
+            color: #e2e8f0;
+        }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.4); }
+
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 h-screen flex flex-col overflow-hidden">
+<body class="h-screen w-screen flex flex-col overflow-hidden relative">
 
-    <!-- Header / Navbar -->
-    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex justify-between items-center shadow-lg">
-        <div class="flex items-center space-x-3">
-            <div class="bg-indigo-600 text-white font-extrabold px-3 py-1.5 rounded-xl text-xl tracking-wider shadow-indigo-500/50 shadow-md">PULSE</div>
-            <span class="text-xs bg-indigo-500/10 text-indigo-400 font-semibold px-2.5 py-1 rounded-full border border-indigo-500/20">WebRTC Hub</span>
-        </div>
-        <div id="connection-status" class="flex items-center space-x-2 text-sm">
-            <span class="w-3 h-3 rounded-full bg-amber-500 animate-pulse" id="status-dot"></span>
-            <span id="status-text" class="text-slate-400 font-medium">Disconnected</span>
-        </div>
-    </header>
+    <!-- Flying Starfield Background -->
+    <canvas id="starfield" class="absolute inset-0 z-0 pointer-events-none"></canvas>
 
-    <!-- Main Container -->
-    <main class="flex-1 flex overflow-hidden relative">
-
-        <!-- Lobby View -->
-        <div id="lobby-view" class="m-auto max-w-md w-full p-8 bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl space-y-6">
-            <div class="text-center space-y-2">
-                <h1 class="text-3xl font-extrabold tracking-tight">Jump into the Room</h1>
-                <p class="text-slate-400 text-sm">Join the public hub or enter a secure private code.</p>
+    <!-- App Container -->
+    <div class="relative z-10 flex flex-col h-full w-full">
+        
+        <!-- Single Clean Header -->
+        <header class="glass-panel px-6 py-3.5 flex justify-between items-center shadow-md">
+            <div class="flex items-center space-x-3">
+                <span class="font-bold text-white text-lg tracking-wide bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">FalconChat</span>
             </div>
-
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Your Nickname</label>
-                    <input type="text" id="username-input" placeholder="e.g. CyberNinja" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-indigo-500 transition font-medium">
-                </div>
-
-                <button onclick="joinServer('public-hub')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2">
-                    <span>🌐 Join Public Server</span>
-                </button>
-
-                <div class="relative flex py-2 items-center">
-                    <div class="flex-grow border-t border-slate-800"></div>
-                    <span class="flex-shrink mx-4 text-slate-500 text-xs font-bold uppercase">or private room</span>
-                    <div class="flex-grow border-t border-slate-800"></div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <input type="text" id="room-code-input" placeholder="Room Code" class="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-indigo-500 transition font-medium uppercase">
-                    <input type="number" id="room-capacity" placeholder="Max (e.g. 10)" value="10" min="2" max="50" class="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-indigo-500 transition font-medium">
-                </div>
-
-                <button onclick="joinPrivateRoom()" class="w-full bg-slate-800 hover:bg-slate-700 text-indigo-400 border border-indigo-500/30 font-bold py-3 rounded-xl transition">
-                    🔒 Join Private Room
-                </button>
+            <div id="connection-status" class="flex items-center space-x-2 text-sm font-medium">
+                <span class="w-2.5 h-2.5 rounded-full bg-gray-500" id="status-dot"></span>
+                <span id="status-text" class="text-gray-400">Disconnected</span>
             </div>
-        </div>
+        </header>
 
-        <!-- Chat Room View (Hidden by default) -->
-        <div id="chat-view" class="hidden flex-1 flex h-full">
-            <!-- Sidebar: Participants -->
-            <aside class="w-72 bg-slate-900 border-r border-slate-800 flex flex-col">
-                <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+        <!-- Main Content Area -->
+        <main class="flex-1 flex overflow-hidden relative">
+
+            <!-- ================= LOBBY VIEW ================= -->
+            <div id="lobby-view" class="m-auto max-w-md w-full p-8 glass-panel rounded-3xl shadow-2xl space-y-6">
+                <div class="text-center space-y-1">
+                    <h1 class="text-2xl font-bold text-white tracking-wide">Welcome</h1>
+                    <p class="text-gray-400 text-sm">Join the public room or enter a private room code.</p>
+                </div>
+
+                <div class="space-y-4 pt-2">
                     <div>
-                        <h2 id="current-room-title" class="font-bold text-lg text-indigo-400">Public Server</h2>
-                        <span id="room-meta" class="text-xs text-slate-400">Connected Hub</span>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Your Name</label>
+                        <input type="text" id="username-input" placeholder="e.g. Alex" class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition shadow-inner">
                     </div>
-                    <button onclick="leaveRoom()" class="text-xs bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 px-2.5 py-1.5 rounded-lg font-semibold transition">Leave</button>
-                </div>
-                <div class="p-4 flex-1 overflow-y-auto space-y-2">
-                    <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Connected Peers</h3>
-                    <div id="peer-list" class="space-y-1.5">
-                        <!-- Dynamically populated peer list -->
+
+                    <button onclick="joinServer('public-hub')" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3.5 rounded-xl transition shadow-lg shadow-purple-500/25">
+                        Join Public Room
+                    </button>
+
+                    <div class="relative flex py-2 items-center">
+                        <div class="flex-grow border-t border-white/10"></div>
+                        <span class="flex-shrink mx-4 text-gray-500 text-xs font-medium uppercase">Or</span>
+                        <div class="flex-grow border-t border-white/10"></div>
                     </div>
-                </div>
-            </aside>
 
-            <!-- Chat Main Area -->
-            <div class="flex-1 flex flex-col bg-slate-950">
-                <!-- Message Stream -->
-                <div id="message-container" class="flex-1 p-6 overflow-y-auto space-y-4">
-                    <!-- Chat messages injected here -->
-                </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <input type="text" id="room-code-input" placeholder="Room Code" class="col-span-2 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition shadow-inner uppercase">
+                        <input type="number" id="room-capacity" placeholder="Max" value="10" min="2" max="50" class="col-span-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition shadow-inner">
+                    </div>
 
-                <!-- Input Controls -->
-                <div class="p-4 bg-slate-900 border-t border-slate-800">
-                    <form id="chat-form" onsubmit="handleSendText(event)" class="flex items-center space-x-3">
-                        <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 p-3 rounded-xl border border-slate-700 transition text-slate-300 hover:text-white" title="Send Image">
-                            📷
-                            <input type="file" id="image-input" accept="image/*" class="hidden" onchange="previewImage(event)">
-                        </label>
-                        <input type="text" id="message-input" placeholder="Type your message here..." autocomplete="off" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-indigo-500 transition font-medium">
-                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-indigo-600/30">
-                            Send
-                        </button>
-                    </form>
+                    <button onclick="joinPrivateRoom()" class="w-full bg-white/5 hover:bg-white/10 text-white border border-white/20 font-semibold py-3 rounded-xl transition">
+                        Join Private Room
+                    </button>
                 </div>
             </div>
-        </div>
+
+            <!-- ================= CHAT VIEW ================= -->
+            <div id="chat-view" class="hidden flex-1 w-full h-full flex">
+                
+                <!-- Sidebar -->
+                <aside class="w-64 glass-panel border-r border-white/5 flex flex-col z-10">
+                    <div class="p-4 border-b border-white/5 flex justify-between items-center bg-black/20">
+                        <h2 id="current-room-title" class="font-semibold text-white truncate max-w-[120px]">Public</h2>
+                        <button onclick="leaveRoom()" class="text-xs bg-red-500/20 text-red-300 hover:bg-red-500/40 hover:text-white px-3 py-1.5 rounded-lg font-medium transition">Leave</button>
+                    </div>
+                    <div class="p-4 flex-1 overflow-y-auto space-y-3">
+                        <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Online Users</h3>
+                        <div id="peer-list" class="space-y-2">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Chat Panel -->
+                <div class="flex-1 flex flex-col relative bg-black/20 backdrop-blur-sm z-10">
+                    
+                    <!-- Video Grid container -->
+                    <div id="video-grid-container" class="hidden bg-black/40 border-b border-white/10 p-4 max-h-64 overflow-y-auto">
+                        <div id="video-grid" class="flex gap-4 overflow-x-auto pb-2 snap-x"></div>
+                    </div>
+
+                    <!-- Messages Stream -->
+                    <div id="message-container" class="flex-1 p-6 overflow-y-auto space-y-5"></div>
+
+                    <!-- Input Bar -->
+                    <div class="p-4 glass-panel border-t border-white/5">
+                        <form id="chat-form" onsubmit="handleSendText(event)" class="flex items-center space-x-3">
+                            <button type="button" id="video-btn" onclick="toggleVideo()" class="bg-white/10 hover:bg-white/20 p-3 rounded-xl border border-white/10 transition text-gray-300 hover:text-white" title="Toggle Camera">
+                                📷
+                            </button>
+                            <label class="cursor-pointer bg-white/10 hover:bg-white/20 p-3 rounded-xl border border-white/10 transition text-gray-300 hover:text-white" title="Send Image">
+                                🖼️
+                                <input type="file" id="image-input" accept="image/*" class="hidden" onchange="previewImage(event)">
+                            </label>
+                            <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" class="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition shadow-inner">
+                            <button type="submit" class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white px-6 py-3 rounded-xl font-semibold transition shadow-lg shadow-purple-500/25">
+                                Send
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
 
         <!-- Image Preview Modal -->
-        <div id="image-modal" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
-                <div class="flex justify-between items-center">
-                    <h3 class="font-bold text-lg text-slate-200">Send Image Attachment</h3>
-                    <button onclick="closeImageModal()" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+        <div id="image-modal" class="hidden absolute inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div class="glass-panel rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+                <div class="flex justify-between items-center border-b border-white/10 pb-3">
+                    <h3 class="font-semibold text-lg text-white">Send Image</h3>
+                    <button onclick="closeImageModal()" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
                 </div>
-                <div class="rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 max-h-64 flex items-center justify-center">
-                    <img id="modal-img-preview" class="max-h-64 object-contain">
+                <div class="bg-black/50 border border-white/10 rounded-2xl max-h-64 flex items-center justify-center p-2 overflow-hidden">
+                    <img id="modal-img-preview" class="max-h-64 object-contain rounded-xl">
                 </div>
-                <input type="text" id="image-caption-input" placeholder="Add a caption (optional)..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-indigo-500 transition font-medium text-sm">
-                <div class="flex space-x-3">
-                    <button onclick="closeImageModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-xl transition">Cancel</button>
-                    <button onclick="handleSendImage()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-indigo-600/20">Send Image</button>
+                <input type="text" id="image-caption-input" placeholder="Add a caption..." class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition text-sm">
+                <div class="flex space-x-3 pt-2">
+                    <button onclick="closeImageModal()" class="flex-1 bg-white/5 hover:bg-white/10 text-white font-semibold py-3 rounded-xl transition">Cancel</button>
+                    <button onclick="handleSendImage()" class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-purple-500/25">Send</button>
                 </div>
             </div>
         </div>
+    </div>
 
-    </main>
-
-    <!-- Application Script -->
+    <!-- Script -->
     <script>
+        // Flying Starfield Galaxy Background
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+        const numStars = 350;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Star {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = (Math.random() - 0.5) * canvas.width * 2;
+                this.y = (Math.random() - 0.5) * canvas.height * 2;
+                this.z = Math.random() * canvas.width;
+                this.pz = this.z;
+            }
+            update() {
+                this.z -= 2.5;
+                if (this.z < 1) {
+                    this.reset();
+                    this.z = canvas.width;
+                }
+            }
+            draw() {
+                let sx = (this.x / this.z) * canvas.width + canvas.width / 2;
+                let sy = (this.y / this.z) * canvas.height + canvas.height / 2;
+                let px = (this.x / this.pz) * canvas.width + canvas.width / 2;
+                let py = (this.y / this.pz) * canvas.height + canvas.height / 2;
+                
+                this.pz = this.z;
+
+                ctx.beginPath();
+                ctx.moveTo(px, py);
+                ctx.lineTo(sx, sy);
+                ctx.lineWidth = (1 - this.z / canvas.width) * 2.5;
+                ctx.strokeStyle = `rgba(255, 255, 255, ${1 - this.z / canvas.width})`;
+                ctx.stroke();
+            }
+        }
+
+        for (let i = 0; i < numStars; i++) stars.push(new Star());
+
+        function animateStars() {
+            ctx.fillStyle = 'rgba(11, 15, 25, 0.35)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(star => { star.update(); star.draw(); });
+            requestAnimationFrame(animateStars);
+        }
+        animateStars();
+
+        // Chat Application Logic
         let peer = null;
-        let connections = {}; // Map of peerId -> connection (if host) or single host connection (if client)
+        let connections = {}; 
         let myUsername = '';
         let roomCode = '';
         let isHost = false;
         let hostConnection = null;
         let stagedImageBase64 = null;
-        let participantNames = {};
+        let participantNames = {}; 
+        let localStream = null;
+        let activeCalls = {};
+
+        const peerConfig = {
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            }
+        };
+
+        function requestNotificationPermission() {
+            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+        }
+
+        function sendOSNotification(title, body) {
+            if ("Notification" in window && Notification.permission === "granted" && document.hidden) {
+                new Notification(title, { body: body });
+            }
+        }
 
         function updateStatus(text, colorClass) {
             document.getElementById('status-text').innerText = text;
-            document.getElementById('status-dot').className = `w-3 h-3 rounded-full ${colorClass}`;
+            document.getElementById('status-dot').className = `w-2.5 h-2.5 rounded-full ${colorClass}`;
         }
 
         function joinServer(code) {
             const name = document.getElementById('username-input').value.trim();
-            if (!name) { alert('Please enter a nickname.'); return; }
+            if (!name) { alert('Please enter your name.'); return; }
             myUsername = name;
             roomCode = code.toUpperCase();
+            requestNotificationPermission();
             initConnection();
         }
 
         function joinPrivateRoom() {
             const code = document.getElementById('room-code-input').value.trim();
-            if (!code) { alert('Please enter a room code.'); return; }
+            if (!code) { alert('Please enter a Room Code.'); return; }
             joinServer(code);
         }
 
         function getTargetHostId() {
-            return `wayground-room-${roomCode}-host`;
+            return `falconchat-${roomCode}-host`;
         }
 
         function initConnection() {
-            updateStatus('Connecting...', 'bg-amber-500');
+            updateStatus('Connecting...', 'bg-yellow-400 animate-pulse');
             const targetHostId = getTargetHostId();
-
-            // Try to register as the host of this room
-            peer = new Peer(targetHostId);
+            peer = new Peer(targetHostId, peerConfig);
 
             peer.on('open', (id) => {
-                // Success! We claimed the host ID, meaning we created the room.
                 isHost = true;
-                updateStatus('Connected (Host)', 'bg-emerald-500');
+                updateStatus('Connected (Host)', 'bg-emerald-400 shadow-[0_0_8px_#34d399]');
                 transitionToChatUI();
                 participantNames[peer.id] = myUsername;
-                addSystemMessage(`Room created! You are the host.`);
+                addSystemMessage(`Room created successfully.`);
                 updatePeerListUI();
+                setupHostListeners();
+                setupVideoListeners();
             });
 
             peer.on('error', (err) => {
                 if (err.type === 'unavailable-id') {
-                    // Host already exists! Clean up and join as a standard client connecting to the host.
                     peer.destroy();
                     connectAsClient(targetHostId);
                 } else {
                     console.error(err);
-                    updateStatus('Connection Error', 'bg-rose-500');
+                    updateStatus('Connection Error', 'bg-red-500');
                 }
             });
         }
 
         function connectAsClient(hostId) {
             isHost = false;
-            peer = new Peer(); // Random ID for client
+            peer = new Peer(undefined, peerConfig);
 
             peer.on('open', (id) => {
-                updateStatus('Connecting to Room...', 'bg-amber-500');
-                
-                // Connect to the room host
+                updateStatus('Joining...', 'bg-yellow-400');
                 const conn = peer.connect(hostId, { metadata: { username: myUsername } });
                 setupClientConnection(conn);
+                setupVideoListeners();
             });
 
             peer.on('error', (err) => {
                 console.error(err);
-                updateStatus('Failed to join room', 'bg-rose-500');
-                alert('Could not connect to room host. Make sure the room code is active.');
+                updateStatus('Failed to join', 'bg-red-500');
+                alert('Could not connect. Verify the room code and ensure the host is online.');
             });
         }
 
         function setupClientConnection(conn) {
             hostConnection = conn;
-
             conn.on('open', () => {
-                updateStatus('Connected', 'bg-emerald-500');
+                updateStatus('Connected', 'bg-emerald-400 shadow-[0_0_8px_#34d399]');
                 transitionToChatUI();
-                addSystemMessage(`Connected to room <b>${roomCode}</b>.`);
-                
-                // Send our username handshake
+                addSystemMessage(`Joined room: ${roomCode}`);
                 conn.send({ type: 'handshake', username: myUsername });
             });
-
-            conn.on('data', (data) => {
-                handleIncomingData(data);
-            });
-
+            conn.on('data', (data) => handleIncomingData(data));
             conn.on('close', () => {
-                updateStatus('Disconnected', 'bg-rose-500');
-                addSystemMessage('Host closed the connection.');
+                updateStatus('Disconnected', 'bg-red-500');
+                addSystemMessage('The host has ended the session.');
+                leaveRoom();
             });
         }
 
-        // Host handles incoming connections from clients
-        Peer.prototype && true; // Placeholder scope check
-        // We attach listener once peer is ready as host
-        // Modifying initConnection block for host incoming handler:
         function setupHostListeners() {
             peer.on('connection', (conn) => {
                 connections[conn.peer] = conn;
-
                 conn.on('data', (data) => {
                     if (data.type === 'handshake') {
                         participantNames[conn.peer] = data.username;
                         broadcastParticipantList();
-                        broadcastSystemMessage(`${data.username} joined the room.`);
+                        broadcastSystemMessage(`${data.username} joined the chat.`);
                     } else {
-                        // Relay message to all other clients + host view
                         handleIncomingData(data);
                         broadcastToOthers(data, conn.peer);
                     }
                 });
-
                 conn.on('close', () => {
-                    const leftName = participantNames[conn.peer] || 'A peer';
+                    const leftName = participantNames[conn.peer] || 'Someone';
                     delete connections[conn.peer];
                     delete participantNames[conn.peer];
                     broadcastParticipantList();
-                    broadcastSystemMessage(`${leftName} left the room.`);
+                    broadcastSystemMessage(`${leftName} left the chat.`);
+                    removeVideoStream(conn.peer);
                 });
             });
         }
 
-        // Hook up host listener right after claiming host
-        // We update initConnection's peer.on('open') block programmatically via function below:
-        const originalInit = initConnection;
-        // Re-defining initConnection with proper host listener hook:
-        window.initConnection = function() {
-            updateStatus('Connecting...', 'bg-amber-500');
-            const targetHostId = getTargetHostId();
-            peer = new Peer(targetHostId);
-
-            peer.on('open', (id) => {
-                isHost = true;
-                updateStatus('Connected (Host)', 'bg-emerald-500');
-                transitionToChatUI();
-                participantNames[peer.id] = myUsername;
-                addSystemMessage(`Room created! You are the host.`);
-                updatePeerListUI();
-                setupHostListeners();
-            });
-
-            peer.on('error', (err) => {
-                if (err.type === 'unavailable-id') {
-                    peer.destroy();
-                    connectAsClient(targetHostId);
-                } else {
-                    console.error(err);
-                    updateStatus('Connection Error', 'bg-rose-500');
-                }
-            });
-        };
-
         function broadcastToOthers(data, senderPeerId) {
             Object.keys(connections).forEach(pId => {
-                if (pId !== senderPeerId) {
-                    connections[pId].send(data);
-                }
+                if (pId !== senderPeerId) connections[pId].send(data);
             });
         }
 
@@ -306,20 +367,102 @@
 
         function broadcastParticipantList() {
             const listPayload = { type: 'participants', names: participantNames };
-            // Update local UI
             updatePeerListUI();
-            // Send to all clients
             Object.values(connections).forEach(conn => conn.send(listPayload));
         }
 
         function handleIncomingData(data) {
             if (data.type === 'chat' || data.type === 'image') {
                 renderMessageBubble(data, false);
+                sendOSNotification(`New message from ${data.username}`, data.type === 'image' ? '[Image]' : data.message);
             } else if (data.type === 'system') {
                 addSystemMessage(data.message);
             } else if (data.type === 'participants') {
                 participantNames = data.names;
                 updatePeerListUI();
+            }
+        }
+
+        function setupVideoListeners() {
+            peer.on('call', (call) => {
+                call.answer(localStream);
+                call.on('stream', (remoteStream) => {
+                    if (!document.getElementById(`video-${call.peer}`)) {
+                        const callerName = participantNames[call.peer] || call.metadata?.username || 'Guest';
+                        addVideoStream(call.peer, remoteStream, callerName);
+                    }
+                });
+                call.on('close', () => removeVideoStream(call.peer));
+                activeCalls[call.peer] = call;
+            });
+        }
+
+        async function toggleVideo() {
+            const btn = document.getElementById('video-btn');
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+                removeVideoStream('local');
+                Object.values(activeCalls).forEach(call => call.close());
+                activeCalls = {};
+                btn.className = "bg-white/10 hover:bg-white/20 p-3 rounded-xl border border-white/10 transition text-gray-300 hover:text-white";
+            } else {
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    addVideoStream('local', localStream, 'You', true);
+                    btn.className = "bg-red-500 text-white p-3 rounded-xl border border-red-400 transition shadow-lg shadow-red-500/30";
+                    
+                    Object.keys(participantNames).forEach(peerId => {
+                        if (peerId !== peer.id) {
+                            const call = peer.call(peerId, localStream, { metadata: { username: myUsername } });
+                            call.on('stream', (remoteStream) => {
+                                if (!document.getElementById(`video-${call.peer}`)) {
+                                    addVideoStream(call.peer, remoteStream, participantNames[call.peer]);
+                                }
+                            });
+                            call.on('close', () => removeVideoStream(call.peer));
+                            activeCalls[call.peer] = call;
+                        }
+                    });
+                } catch (err) {
+                    console.error('Camera/Mic Permission Error:', err);
+                    alert('Camera and microphone access is required for video calls. Please check your browser permissions and ensure no other app is using your camera.');
+                }
+            }
+        }
+
+        function addVideoStream(peerId, stream, name, isLocal = false) {
+            const gridContainer = document.getElementById('video-grid-container');
+            const grid = document.getElementById('video-grid');
+            gridContainer.classList.remove('hidden');
+
+            const wrapper = document.createElement('div');
+            wrapper.id = `video-${peerId}`;
+            wrapper.className = "relative flex-shrink-0 w-64 h-48 bg-black/50 rounded-2xl overflow-hidden border border-white/10 snap-center shadow-lg";
+            
+            const video = document.createElement('video');
+            video.srcObject = stream;
+            video.autoplay = true;
+            video.className = "w-full h-full object-cover";
+            if (isLocal) {
+                video.muted = true;
+                video.classList.add('transform', 'scale-x-[-1]'); 
+            }
+
+            const label = document.createElement('div');
+            label.className = "absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white text-xs font-semibold px-2 py-1 rounded-md";
+            label.innerText = name;
+
+            wrapper.appendChild(video);
+            wrapper.appendChild(label);
+            grid.appendChild(wrapper);
+        }
+
+        function removeVideoStream(peerId) {
+            const el = document.getElementById(`video-${peerId}`);
+            if (el) el.remove();
+            if (document.getElementById('video-grid').children.length === 0) {
+                document.getElementById('video-grid-container').classList.add('hidden');
             }
         }
 
@@ -329,12 +472,8 @@
             const text = input.value.trim();
             if (!text) return;
 
-            const payload = { type: 'chat', username: myUsername, message: text, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
-            
-            // Render locally
+            const payload = { type: 'chat', username: myUsername, message: text, time: getTime() };
             renderMessageBubble(payload, true);
-
-            // Send out
             dispatchPayload(payload);
             input.value = '';
         }
@@ -342,7 +481,6 @@
         function previewImage(e) {
             const file = e.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(event) {
                 stagedImageBase64 = event.target.result;
@@ -362,49 +500,46 @@
         function handleSendImage() {
             if (!stagedImageBase64) return;
             const caption = document.getElementById('image-caption-input').value.trim();
-
-            const payload = { type: 'image', username: myUsername, image: stagedImageBase64, caption: caption, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
-
-            // Render locally
+            const payload = { type: 'image', username: myUsername, image: stagedImageBase64, caption: caption, time: getTime() };
             renderMessageBubble(payload, true);
-
-            // Send out
             dispatchPayload(payload);
             closeImageModal();
         }
 
         function dispatchPayload(payload) {
             if (isHost) {
-                // Host broadcasts to all clients
                 Object.values(connections).forEach(conn => conn.send(payload));
             } else if (hostConnection && hostConnection.open) {
-                // Client sends to host
                 hostConnection.send(payload);
             }
+        }
+
+        function getTime() {
+            return new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         }
 
         function renderMessageBubble(data, isSelf) {
             const container = document.getElementById('message-container');
             const bubble = document.createElement('div');
-            const timeStr = data.time || new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const timeStr = data.time || getTime();
 
             if (data.type === 'chat') {
-                bubble.className = `flex flex-col space-y-1 ${isSelf ? 'items-end' : ''}`;
+                bubble.className = `flex flex-col space-y-1 ${isSelf ? 'items-end' : 'items-start'}`;
                 bubble.innerHTML = `
                     <div class="flex items-baseline space-x-2">
-                        ${isSelf ? `<span class="text-xs text-slate-500">${timeStr}</span><span class="font-bold text-indigo-400 text-sm">You</span>` : `<span class="font-bold text-indigo-400 text-sm">${escapeHtml(data.username)}</span><span class="text-xs text-slate-500">${timeStr}</span>`}
+                        ${isSelf ? `<span class="text-xs text-gray-500 font-medium">${timeStr}</span><span class="font-semibold text-purple-400 text-sm">You</span>` : `<span class="font-semibold text-blue-400 text-sm">${escapeHtml(data.username)}</span><span class="text-xs text-gray-500 font-medium">${timeStr}</span>`}
                     </div>
-                    <div class="${isSelf ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-slate-900 border border-slate-800 text-slate-200'} p-3.5 rounded-2xl max-w-lg text-sm">${escapeHtml(data.message)}</div>
+                    <div class="${isSelf ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-purple-500/20' : 'bg-white/10 backdrop-blur-md border border-white/5 text-gray-100 shadow-lg'} px-4 py-2.5 rounded-2xl max-w-lg text-sm">${escapeHtml(data.message)}</div>
                 `;
             } else if (data.type === 'image') {
-                bubble.className = `flex flex-col space-y-1 ${isSelf ? 'items-end' : ''}`;
+                bubble.className = `flex flex-col space-y-1 ${isSelf ? 'items-end' : 'items-start'}`;
                 bubble.innerHTML = `
                     <div class="flex items-baseline space-x-2">
-                        ${isSelf ? `<span class="text-xs text-slate-500">${timeStr}</span><span class="font-bold text-indigo-400 text-sm">You</span>` : `<span class="font-bold text-indigo-400 text-sm">${escapeHtml(data.username)}</span><span class="text-xs text-slate-500">${timeStr}</span>`}
+                        ${isSelf ? `<span class="text-xs text-gray-500 font-medium">${timeStr}</span><span class="font-semibold text-purple-400 text-sm">You</span>` : `<span class="font-semibold text-blue-400 text-sm">${escapeHtml(data.username)}</span><span class="text-xs text-gray-500 font-medium">${timeStr}</span>`}
                     </div>
-                    <div class="bg-slate-900 border ${isSelf ? 'border-indigo-500/30' : 'border-slate-800'} p-2.5 rounded-2xl max-w-xs space-y-2">
-                        <img src="${data.image}" class="rounded-xl w-full object-cover">
-                        ${data.caption ? `<p class="text-slate-200 text-sm px-1">${escapeHtml(data.caption)}</p>` : ''}
+                    <div class="bg-black/40 border border-white/10 p-2 rounded-2xl max-w-xs space-y-2 backdrop-blur-sm">
+                        <img src="${data.image}" class="w-full rounded-xl object-cover">
+                        ${data.caption ? `<p class="text-gray-200 text-sm px-2 pb-1">${escapeHtml(data.caption)}</p>` : ''}
                     </div>
                 `;
             }
@@ -412,11 +547,11 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        function addSystemMessage(htmlText) {
+        function addSystemMessage(text) {
             const container = document.getElementById('message-container');
             const note = document.createElement('div');
-            note.className = "text-center my-2";
-            note.innerHTML = `<span class="text-xs bg-slate-900 text-slate-400 px-3 py-1 rounded-full border border-slate-800">${htmlText}</span>`;
+            note.className = "flex justify-center my-4";
+            note.innerHTML = `<span class="text-xs bg-white/5 text-gray-400 px-4 py-1.5 rounded-full border border-white/10 backdrop-blur-sm">${text}</span>`;
             container.appendChild(note);
             container.scrollTop = container.scrollHeight;
         }
@@ -424,19 +559,13 @@
         function updatePeerListUI() {
             const list = document.getElementById('peer-list');
             list.innerHTML = '';
-            
-            // Render all known participants
-            const namesArray = Object.values(participantNames);
-            if (namesArray.length === 0) {
-                namesArray.push(myUsername);
-            }
-
-            namesArray.forEach((name, idx) => {
-                const isMe = name === myUsername;
+            Object.keys(participantNames).forEach((pId) => {
+                const name = participantNames[pId];
+                const isMe = pId === peer.id;
                 list.innerHTML += `
-                    <div class="flex items-center space-x-2.5 px-3 py-2 bg-slate-950 rounded-xl border border-slate-800/80">
-                        <div class="w-2.5 h-2.5 rounded-full ${isMe ? 'bg-emerald-500' : 'bg-indigo-500'}"></div>
-                        <span class="text-sm font-semibold text-slate-200">${escapeHtml(name)} ${isMe ? '(You)' : ''}</span>
+                    <div class="flex items-center space-x-3 px-3 py-2 bg-white/5 rounded-xl border border-white/5">
+                        <div class="w-2 h-2 rounded-full ${isMe ? 'bg-purple-500 shadow-[0_0_8px_#a855f7]' : 'bg-gray-400'}"></div>
+                        <span class="text-sm font-medium text-gray-200 truncate">${escapeHtml(name)} ${isMe ? '(You)' : ''}</span>
                     </div>
                 `;
             });
@@ -445,18 +574,28 @@
         function transitionToChatUI() {
             document.getElementById('lobby-view').classList.add('hidden');
             document.getElementById('chat-view').classList.remove('hidden');
-            document.getElementById('current-room-title').innerText = roomCode === 'PUBLIC-HUB' ? 'Public Server' : `Room: ${roomCode}`;
+            document.getElementById('current-room-title').innerText = roomCode === 'PUBLIC-HUB' ? 'Public' : `Room: ${roomCode}`;
         }
 
         function leaveRoom() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            Object.values(activeCalls).forEach(call => call.close());
+            activeCalls = {};
+            document.getElementById('video-grid').innerHTML = '';
+            document.getElementById('video-grid-container').classList.add('hidden');
+            
             if (peer) peer.destroy();
             connections = {};
             participantNames = {};
             hostConnection = null;
+            
             document.getElementById('chat-view').classList.add('hidden');
             document.getElementById('lobby-view').classList.remove('hidden');
             document.getElementById('message-container').innerHTML = '';
-            updateStatus('Disconnected', 'bg-amber-500');
+            updateStatus('Disconnected', 'bg-gray-500');
         }
 
         function escapeHtml(text) {
